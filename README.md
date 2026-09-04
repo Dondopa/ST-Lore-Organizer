@@ -130,7 +130,7 @@ The prototype stores:
 
 Deleting the extension does not merge, rewrite, or delete your native lorebooks.
 
-## Current limitations — v0.1.2
+## Current limitations — v0.1.3
 
 - A lorebook belongs to one organizer group at a time.
 - Groups cannot yet be reordered with drag-and-drop.
@@ -154,3 +154,5 @@ Deleting the extension does not merge, rewrite, or delete your native lorebooks.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+- Per-group **Select All / Deselect All** in Bulk Select mode (direct members only).

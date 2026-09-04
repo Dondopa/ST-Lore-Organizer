@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+- Added per-group **Select All / Deselect All** controls while Bulk Select mode is active.
+- Group selection affects only lorebooks directly assigned to that group, not nested subgroups.
+- Added matching Select All / Deselect All control for Ungrouped lorebooks.
+- Selected books can then be mass-moved using the existing bulk destination control.
+
 All notable changes to Lore Organizer will be documented here.
 
 ## 0.1.2 - 2026-09-04

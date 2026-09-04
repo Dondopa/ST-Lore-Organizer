@@ -56,6 +56,25 @@ function booksInGroupTree(groupId) {
     return books().filter(name => ids.has(settings().assignments[name]));
 }
 
+function directBooksInGroup(groupId) {
+    return assignedTo(groupId);
+}
+
+function setBulkSelection(names, selected) {
+    for (const name of names) {
+        if (selected) uiState.bulkSelected.add(name);
+        else uiState.bulkSelected.delete(name);
+    }
+}
+
+function bulkSelectionButton(groupId) {
+    if (!uiState.bulkMode) return '';
+    const direct = directBooksInGroup(groupId);
+    if (!direct.length) return '<button class="menu_button lo-group-selectall" disabled title="No lorebooks directly in this group">Select All</button>';
+    const allSelected = direct.every(name => uiState.bulkSelected.has(name));
+    return `<button class="menu_button lo-group-selectall" data-group="${esc(groupId)}" data-action="${allSelected ? 'clear' : 'select'}" title="${allSelected ? 'Deselect' : 'Select'} all lorebooks directly in this group">${allSelected ? 'Deselect All' : 'Select All'}</button>`;
+}
+
 function applyNativeGlobalSelection(targetNames) {
     const valid = new Set(targetNames.filter(name => books().includes(name)));
     const indices = books()
@@ -132,6 +151,7 @@ function renderGroup(g, depth=0, query='') {
         <div class="lo-group-head" data-drop-group="${esc(g.id)}">
             <button class="menu_button lo-collapse" data-group="${esc(g.id)}" title="Collapse/expand">${bodyHidden?'▶':'▼'}</button>
             <strong>${esc(g.name)}</strong><span class="lo-count">${activeCount}/${allTreeBooks.length}</span>
+            ${bulkSelectionButton(g.id)}
             <span class="lo-spacer"></span>
             <button class="menu_button lo-group-on" data-group="${esc(g.id)}" title="Enable this group and descendants">On</button>
             <button class="menu_button lo-group-off" data-group="${esc(g.id)}" title="Disable this group and descendants">Off</button>
@@ -222,7 +242,7 @@ function render() {
     const roots = children(null);
     const loose = ungrouped().filter(n=>!query || n.toLowerCase().includes(query));
     root.innerHTML = `${roots.map(g=>renderGroup(g,0,query)).join('')}
-      <section class="lo-group lo-ungrouped"><div class="lo-group-head" data-drop-group=""><strong>Ungrouped</strong><span class="lo-count">${loose.length}</span></div>
+      <section class="lo-group lo-ungrouped"><div class="lo-group-head" data-drop-group=""><strong>Ungrouped</strong><span class="lo-count">${loose.length}</span>${uiState.bulkMode ? `<button class="menu_button lo-ungrouped-selectall" data-action="${ungrouped().length && ungrouped().every(name => uiState.bulkSelected.has(name)) ? 'clear' : 'select'}" ${ungrouped().length ? '' : 'disabled'} title="Select or deselect all ungrouped lorebooks">${ungrouped().length && ungrouped().every(name => uiState.bulkSelected.has(name)) ? 'Deselect All' : 'Select All'}</button>` : ''}</div>
       <div class="lo-group-body">${loose.map(renderBook).join('')}</div></section>`;
     const presetWrap = document.querySelector('#lo_presets_wrap');
     if (presetWrap) presetWrap.innerHTML = renderPresets();
@@ -257,6 +277,16 @@ function bindDynamic() {
         if (e.currentTarget.checked) uiState.bulkSelected.add(name);
         else uiState.bulkSelected.delete(name);
         renderBulkBar();
+    }));
+    document.querySelectorAll('.lo-group-selectall').forEach(el=>el.addEventListener('click', e=>{
+        const id = e.currentTarget.dataset.group;
+        if (!id) return;
+        setBulkSelection(directBooksInGroup(id), e.currentTarget.dataset.action !== 'clear');
+        render();
+    }));
+    document.querySelectorAll('.lo-ungrouped-selectall').forEach(el=>el.addEventListener('click', e=>{
+        setBulkSelection(ungrouped(), e.currentTarget.dataset.action !== 'clear');
+        render();
     }));
     document.querySelectorAll('.lo-move').forEach(el=>el.addEventListener('change', e=>{ const b=e.currentTarget.dataset.book, v=e.currentTarget.value; if(v)settings().assignments[b]=v; else delete settings().assignments[b]; save(); render(); }));
     document.querySelectorAll('.lo-collapse').forEach(el=>el.addEventListener('click', e=>{ const id=e.currentTarget.dataset.group; settings().collapsed[id]=!settings().collapsed[id]; save(); render(); }));
