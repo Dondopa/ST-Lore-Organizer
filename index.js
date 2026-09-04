@@ -149,15 +149,19 @@ function renderGroup(g, depth=0, query='') {
     const bodyHidden = isCollapsed && !query;
     return `<section class="lo-group" data-group="${esc(g.id)}" style="--depth:${depth}">
         <div class="lo-group-head" data-drop-group="${esc(g.id)}">
-            <button class="menu_button lo-collapse" data-group="${esc(g.id)}" title="Collapse/expand">${bodyHidden?'▶':'▼'}</button>
-            <strong>${esc(g.name)}</strong><span class="lo-count">${activeCount}/${allTreeBooks.length}</span>
-            ${bulkSelectionButton(g.id)}
-            <span class="lo-spacer"></span>
-            <button class="menu_button lo-group-on" data-group="${esc(g.id)}" title="Enable this group and descendants">On</button>
-            <button class="menu_button lo-group-off" data-group="${esc(g.id)}" title="Disable this group and descendants">Off</button>
-            <button class="menu_button lo-add-child" data-group="${esc(g.id)}" title="Add subgroup">＋</button>
-            <button class="menu_button lo-rename-group" data-group="${esc(g.id)}" title="Rename">✎</button>
-            <button class="menu_button lo-delete-group" data-group="${esc(g.id)}" title="Delete group">×</button>
+            <div class="lo-group-title-row">
+                <button class="menu_button lo-collapse" data-group="${esc(g.id)}" title="Collapse/expand">${bodyHidden?'▶':'▼'}</button>
+                <strong title="${esc(groupPath(g.id))}">${esc(g.name)}</strong>
+                <span class="lo-count">${activeCount}/${allTreeBooks.length}</span>
+            </div>
+            <div class="lo-group-actions">
+                ${bulkSelectionButton(g.id)}
+                <button class="menu_button lo-group-on" data-group="${esc(g.id)}" title="Enable this group and descendants">On</button>
+                <button class="menu_button lo-group-off" data-group="${esc(g.id)}" title="Disable this group and descendants">Off</button>
+                <button class="menu_button lo-add-child" data-group="${esc(g.id)}" title="Add subgroup">＋</button>
+                <button class="menu_button lo-rename-group" data-group="${esc(g.id)}" title="Rename">✎</button>
+                <button class="menu_button lo-delete-group" data-group="${esc(g.id)}" title="Delete group">×</button>
+            </div>
         </div>
         <div class="lo-group-body ${bodyHidden?'lo-hidden':''}">
             ${direct.map(renderBook).join('')}

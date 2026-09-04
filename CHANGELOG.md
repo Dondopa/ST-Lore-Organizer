@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 - 2026-09-04
+
+### Changed
+- Redesigned group headers into a dedicated title row plus a separate action row.
+- Group names now receive the full available width instead of competing with On/Off/Edit/Delete controls.
+- Reduced cumulative nesting indentation, especially on mobile, so deep trees remain readable.
+- Full group paths are exposed as title text for additional context on desktop.
+
 ## 0.1.3
 
 - Added per-group **Select All / Deselect All** controls while Bulk Select mode is active.
