@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-09-04
+
+### Fixed
+- Global lorebook activation/deactivation now drives SillyTavern's native `#world_info` selector and normal change handler.
+- Group On/Off and presets now apply activation changes in one native selection update instead of repeated slash-style calls.
+- Organizer checkbox state now shares the same source of truth as SillyTavern Global Lore.
+
 All notable changes to Lore Organizer will be documented here.
 
 ## [0.1.0] - 2026-09-04

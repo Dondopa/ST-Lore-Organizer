@@ -5,8 +5,8 @@
   "optional": [],
   "js": "index.js",
   "css": "style.css",
-  "author": "Dondopa + ChatGPT",
-  "version": "0.1.0",
+  "author": "Duvi + ChatGPT",
+  "version": "0.1.1",
   "homePage": "https://github.com/Dondopa/ST-Lore-Organizer",
   "auto_update": true
 }

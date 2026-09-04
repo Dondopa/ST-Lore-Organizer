@@ -1,6 +1,6 @@
 import { extension_settings } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
-import { world_names, selected_world_info, onWorldInfoChange } from '../../../world-info.js';
+import { world_names, selected_world_info } from '../../../world-info.js';
 
 const EXT = 'lore_organizer';
 const VERSION = 1;
@@ -51,25 +51,39 @@ function booksInGroupTree(groupId) {
     return books().filter(name => ids.has(settings().assignments[name]));
 }
 
+function applyNativeGlobalSelection(targetNames) {
+    const valid = new Set(targetNames.filter(name => books().includes(name)));
+    const indices = books()
+        .map(name => ({ name, index: world_names.indexOf(name) }))
+        .filter(({ name, index }) => valid.has(name) && index >= 0)
+        .map(({ index }) => String(index));
+
+    // Drive SillyTavern's own Global Lore <select>. Its native change handler
+    // rebuilds selected_world_info, persists settings, updates Select2, and emits
+    // WORLDINFO_SETTINGS_UPDATED. This avoids maintaining a parallel activation state.
+    const selector = $('#world_info');
+    selector.val(indices.length ? indices : null).trigger('change');
+}
+
 async function setBookActive(name, enabled) {
-    const isActive = activeSet().has(name);
-    if (isActive === enabled) return;
-    onWorldInfoChange({ state: enabled ? 'on' : 'off', silent: true }, name);
+    const target = activeSet();
+    if (enabled) target.add(name);
+    else target.delete(name);
+    applyNativeGlobalSelection([...target]);
 }
 
 async function setMany(names, enabled) {
-    for (const name of names) await setBookActive(name, enabled);
+    const target = activeSet();
+    for (const name of names) {
+        if (enabled) target.add(name);
+        else target.delete(name);
+    }
+    applyNativeGlobalSelection([...target]);
     render();
 }
 
 async function replaceActive(targetNames) {
-    const target = new Set(targetNames.filter(n => books().includes(n)));
-    for (const current of [...(selected_world_info ?? [])]) {
-        if (!target.has(current)) await setBookActive(current, false);
-    }
-    for (const name of target) {
-        if (!activeSet().has(name)) await setBookActive(name, true);
-    }
+    applyNativeGlobalSelection(targetNames);
     render();
 }
 
