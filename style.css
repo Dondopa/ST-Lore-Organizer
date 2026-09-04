@@ -1,8 +1,10 @@
 #lo_panel { margin-top: 8px; }
 #lo_panel .inline-drawer-content { padding: 8px 0; }
-.lo-toolbar,.lo-row,.lo-book,.lo-book-main,.lo-bulkbar,.lo-group-title-row,.lo-group-actions { display:flex; align-items:center; gap:6px; }
-.lo-toolbar { margin-bottom:8px; }
-.lo-toolbar #lo_search { flex:1; min-width:0; }
+.lo-toolbar,.lo-row,.lo-book,.lo-book-main,.lo-book-tools,.lo-bulkbar,.lo-group-title-row,.lo-group-actions,.lo-settings-row,.lo-modal-head,.lo-modal-actions,.lo-check-row { display:flex; align-items:center; gap:6px; }
+.lo-toolbar { margin-bottom:8px; flex-wrap:wrap; }
+.lo-toolbar #lo_search { flex:1; min-width:180px; }
+.lo-settings-row { margin:4px 2px 8px; font-size:.92em; opacity:.9; }
+.lo-settings-row input[type="checkbox"] { appearance:auto !important; -webkit-appearance:checkbox !important; }
 .lo-presets { margin-bottom:8px; }
 .lo-presets select { flex:1; min-width:0; }
 #lo_bulk_wrap { margin-bottom:8px; }
@@ -10,36 +12,55 @@
 .lo-bulkbar select { flex:1; min-width:150px; }
 .lo-bulk-count { white-space:nowrap; font-weight:600; }
 .lo-note { opacity:.7; font-size:.9em; margin:6px 2px 10px; }
-/* Keep nesting readable without sacrificing the group name to horizontal indentation. */
+.lo-warning { margin:7px 0; padding:7px; border:1px solid var(--SmartThemeBorderColor); border-radius:6px; }
 .lo-group { margin:5px 0; border-left:1px solid var(--SmartThemeBorderColor); }
 .lo-group-head { min-height:34px; padding:4px 5px; border-radius:6px; background:color-mix(in srgb,var(--SmartThemeBlurTintColor) 70%,transparent); }
 .lo-group-title-row { min-width:0; width:100%; }
 .lo-group-title-row strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lo-count { opacity:.65; font-size:.85em; white-space:nowrap; }
+.lo-count { opacity:.65; font-size:.82em; white-space:nowrap; }
 .lo-group-actions { flex-wrap:wrap; margin-top:4px; padding-left:34px; }
 .lo-group-body { padding-left:6px; }
-.lo-hidden { display:none; }
+.lo-hidden { display:none !important; }
 .lo-book { min-height:36px; padding:3px 4px; border-bottom:1px solid color-mix(in srgb,var(--SmartThemeBorderColor) 50%,transparent); }
 .lo-book-main { flex:1; min-width:0; }
-.lo-book-main span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lo-book input[type="checkbox"] { appearance:auto !important; -webkit-appearance:checkbox !important; width:16px !important; height:16px !important; min-width:16px; }
+.lo-book-main span:not(.lo-badge) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lo-book input[type="checkbox"], .lo-check-row input[type="checkbox"] { appearance:auto !important; -webkit-appearance:checkbox !important; width:16px !important; height:16px !important; min-width:16px; }
 .lo-bulk-pick { display:flex; align-items:center; padding:2px 4px; }
 .lo-bulk-checkbox { outline:1px solid color-mix(in srgb,currentColor 45%,transparent); outline-offset:2px; }
-.lo-move { max-width:38%; min-width:90px; }
+.lo-book-tools { max-width:44%; min-width:150px; }
+.lo-move { flex:1; min-width:90px; max-width:100%; }
 .lo-collapse { min-width:28px; padding:2px 5px; flex:0 0 auto; }
 .lo-group-head .menu_button { padding:3px 7px; min-width:auto; }
 .lo-drop { outline:2px dashed currentColor; }
 .lo-ungrouped { margin-left:0; margin-top:10px; }
+.lo-badge { flex:0 0 auto; font-size:.75em; padding:1px 4px; border:1px solid var(--SmartThemeBorderColor); border-radius:999px; opacity:.75; white-space:nowrap; }
+
+/* Lightweight modal used for mobile-safe group moving and book aliases/dependencies. */
+.lo-modal { position:fixed; inset:0; z-index:10050; display:flex; align-items:center; justify-content:center; padding:14px; background:rgba(0,0,0,.55); }
+.lo-modal-card { width:min(680px, 96vw); max-height:88vh; overflow:auto; padding:12px; border:1px solid var(--SmartThemeBorderColor); border-radius:10px; background:var(--SmartThemeBlurTintColor); box-shadow:0 10px 35px rgba(0,0,0,.35); }
+.lo-modal-head { position:sticky; top:-12px; z-index:2; justify-content:space-between; padding:8px 0; background:var(--SmartThemeBlurTintColor); }
+.lo-modal-head strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lo-modal-actions { justify-content:flex-end; flex-wrap:wrap; margin-top:10px; }
+.lo-modal select.text_pole { width:100%; }
+.lo-manager-section { margin:10px 0 14px; }
+.lo-help { opacity:.72; font-size:.9em; margin:4px 0 7px; }
+.lo-check-list { max-height:240px; overflow:auto; padding:5px; border:1px solid var(--SmartThemeBorderColor); border-radius:6px; }
+.lo-check-row { padding:3px 2px; align-items:flex-start; }
+.lo-check-row span { min-width:0; overflow-wrap:anywhere; }
+#lo_dep_search { width:100%; margin-bottom:6px; }
+
 @media (max-width: 700px) {
   .lo-group { margin-left:0; }
   .lo-group-body { padding-left:4px; }
   .lo-group-actions { padding-left:34px; gap:5px; }
   .lo-group-title-row strong { max-width:none; }
+  .lo-count { font-size:.75em; }
   .lo-book { align-items:flex-start; flex-direction:column; }
-  .lo-book-main,.lo-move { width:100%; max-width:none; }
+  .lo-book-main,.lo-book-tools,.lo-move { width:100%; max-width:none; }
   .lo-book:has(.lo-bulk-pick) { flex-direction:row; align-items:center; }
-  .lo-toolbar { flex-wrap:wrap; }
   .lo-toolbar #lo_search { flex-basis:100%; }
   .lo-bulkbar > * { flex-grow:1; }
   .lo-bulkbar .lo-bulk-count { flex-basis:100%; }
+  .lo-modal { padding:6px; align-items:flex-start; }
+  .lo-modal-card { width:100%; max-height:95vh; margin-top:2vh; }
 }

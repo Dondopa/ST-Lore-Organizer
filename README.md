@@ -1,158 +1,108 @@
-# 📚 Lore Organizer for SillyTavern
+# ST-Lore-Organizer
 
-A frontend-only SillyTavern extension for organizing large collections of native lorebooks / World Info files without merging or modifying them.
+A frontend-only SillyTavern extension for organizing large collections of native lorebooks without merging or rewriting them.
 
-Lore Organizer adds an organizational layer above SillyTavern's lorebooks so you can structure them however you want—for example:
-
-```text
-Eostia Universe
-├── Worlds
-│   ├── Eostia
-│   ├── Terranovia
-│   └── Albion
-├── Characters
-│   ├── Farryn
-│   ├── Aria Flare
-│   └── Ruby Slade
-└── Systems
-    ├── Universal RPG
-    ├── Alchemy
-    └── Artifacts & Equipment
-```
-
-Groups are **organization only**. The underlying lorebooks remain separate native SillyTavern lorebooks and retain their own entries, triggers, recursion settings, insertion logic, and other World Info configuration.
+Lore Organizer adds a separate hierarchy above SillyTavern World Info / lorebooks. Your actual lorebook JSON files stay native and unchanged.
 
 ## Features
 
-- Arbitrarily nested groups/folders.
-- Lorebooks remain separate native SillyTavern lorebooks.
-- Folder metadata is stored only in `extension_settings.lore_organizer`.
-- Does **not** add organizer metadata to lorebook JSON files.
-- Per-book global activation toggle.
-- Enable or disable an entire group, including descendant groups.
-- Search groups and lorebooks.
-- Desktop drag-and-drop assignment.
-- Mobile-friendly **Move to group** selector.
-- **Bulk Select** mode for mass-moving lorebooks into groups.
-- **Select visible** for fast search → select-all → move workflows.
-- Activation presets: save the current global lorebook set and restore it later.
-- Ungrouped view for newly imported or unassigned lorebooks.
-- No server plugin required.
-
-## Install from GitHub
-
-Once this repository is uploaded to GitHub:
-
-1. Open SillyTavern.
-2. Open **Extensions**.
-3. Choose **Install Extension**.
-4. Paste this repository's GitHub URL.
-5. Install, then reload SillyTavern if necessary.
-
-Example repository URL:
+### Nested groups
+Create any hierarchy you want, for example:
 
 ```text
-https://github.com/YOUR-USERNAME/ST-Lore-Organizer
+Eostia Universe
+├── Setting
+│   ├── Albion
+│   └── Terranovia
+├── Characters
+└── Systems
 ```
 
-Do **not** paste the URL of an individual file, release ZIP, or GitHub folder. Use the repository URL.
+Groups are organizational metadata only.
 
-## Enable automatic updates
+### Native Global Lore activation
+The checkbox beside a lorebook controls SillyTavern's real native Global Lore selection. Group **On** and **Off** operate on the whole group tree.
 
-After you create the GitHub repository, edit `manifest.json`:
+**Only** replaces the current native Global Lore set with the selected group tree (plus dependencies when dependency activation is enabled).
 
-```json
-"homePage": "https://github.com/YOUR-USERNAME/ST-Lore-Organizer",
-"auto_update": true
-```
+### Aliases / multiple placements
+One native lorebook can appear in several organizer groups without copying the lorebook.
 
-Commit that change to GitHub. SillyTavern can then associate the installed extension with its repository for updates.
+Use the `⋯` button beside a lorebook to manage all of its group placements. A small `+N` badge shows extra placements.
 
-The GitHub-ready package intentionally ships with `auto_update` disabled until a real repository URL exists.
+### Dependencies
+A lorebook can declare other lorebooks that should activate with it. Dependencies are organizer metadata; they are not written into lorebook JSON.
 
-## Uploading this package to GitHub
+- Enable a dependent lorebook -> its dependencies also enable.
+- Dependencies can themselves have dependencies.
+- Disable a lorebook -> dependencies are left alone, because another active lorebook may still need them.
+- Dependency activation can be disabled globally with **Auto-activate dependencies**.
 
-The repository root should look like this:
+### Bulk organization
+Bulk Select supports:
+
+- Select visible
+- Select active
+- Select inactive
+- Invert
+- Per-group Select All / Deselect All
+- Move selected to another group
+- Alias selected into an additional group
+
+### Group movement
+Groups can be reparented with the `↪` action. On desktop, groups can also be dragged onto another group to nest them.
+
+### Collapsed-state memory
+Group collapse state and the Ungrouped collapse state persist across reloads. Ungrouped is collapsed automatically when upgrading an already-organized library to v0.2.
+
+### Presets
+Save the current native Global Lore selection as a named preset and restore it later.
+
+### Backup / Restore
+**Backup** downloads the complete Lore Organizer metadata as JSON:
+
+- groups
+- aliases/placements
+- presets
+- collapse state
+- dependencies
+- organizer settings
+
+**Restore** imports a previous organizer backup. Native lorebooks are never replaced by this process.
+
+### Orphan cleanup
+If a lorebook has been renamed/deleted and organizer metadata still references it, Lore Organizer shows a warning and can clean the stale references.
+
+## Installation
+
+In SillyTavern, open the Extensions installer and install from:
 
 ```text
-ST-Lore-Organizer/
-├── .gitignore
-├── CHANGELOG.md
-├── LICENSE
-├── README.md
-├── manifest.json
-├── index.js
-└── style.css
+https://github.com/Dondopa/ST-Lore-Organizer
 ```
 
-The important part is that `manifest.json` is at the **repository root**.
+Reload SillyTavern after installation if necessary.
 
-### Easiest GitHub website method
+## Updating
 
-1. Create a new **public** repository named `ST-Lore-Organizer`.
-2. Do not initialize it with a README, license, or `.gitignore` if you plan to upload this prepared package as-is.
-3. Extract the GitHub-ready ZIP locally.
-4. In the new repository, choose **Add file → Upload files**.
-5. Upload the extracted files themselves—not the containing folder and not the ZIP.
-6. Commit the files.
-7. Edit `manifest.json` on GitHub and replace the blank `homePage` with your repository URL; set `auto_update` to `true`.
-8. Copy the repository URL into SillyTavern's **Install Extension** dialog.
-
-## Local/manual install
-
-Copy the repository folder to:
-
-```text
-SillyTavern/public/scripts/extensions/third-party/ST-Lore-Organizer/
-```
-
-Then reload SillyTavern.
-
-## How activation works
-
-Lore Organizer does not maintain a fake parallel activation state. Its activation controls call SillyTavern's native World Info/global lorebook activation logic, so the organizer and SillyTavern's normal Global Lore selection are intended to remain synchronized.
+The manifest uses the repository as its `homePage` and has automatic update support enabled. You can also use SillyTavern's extension update action manually.
 
 ## Data model
 
-Organizer state is stored in SillyTavern extension settings under:
+Lore Organizer stores its state in SillyTavern extension settings under:
 
 ```text
 extension_settings.lore_organizer
 ```
 
-The prototype stores:
+It does **not** add organizer metadata to native lorebook JSON files.
 
-- groups
-- parent/child relationships
-- lorebook-to-group assignments
-- collapsed state
-- activation presets
+Starting with v0.2, each lorebook can have multiple group placements. Existing v0.1.x single-group assignments are migrated automatically.
 
-Deleting the extension does not merge, rewrite, or delete your native lorebooks.
+## Design principle
 
-## Current limitations — v0.1.4
-
-- A lorebook belongs to one organizer group at a time.
-- Groups cannot yet be reordered with drag-and-drop.
-- Lorebooks can be dragged into groups on desktop, but group nesting itself is created with the subgroup button.
-- No organizer layout import/export yet.
-- No named universe/workspace switcher yet.
-- Mobile uses a select menu for assignment rather than touch drag-and-drop.
-- This is an early prototype and should be tested against your current SillyTavern installation before relying on it as your only organizational workflow.
-
-## Planned ideas
-
-- Multi-membership / aliases: show the same lorebook in multiple groups without duplicating it.
-- Drag-and-drop group nesting and ordering.
-- Organizer layout import/export.
-- Named universes/workspaces.
-- Group activation modes: **Add**, **Remove**, and **Replace Current**.
-- Context menus and additional bulk actions.
-- Compact/floating launcher.
-- Better touch controls.
+Lore Organizer is intentionally not a World Info entry editor. SillyTavern continues to own lorebook contents and triggering behavior. This extension focuses on organizing, navigating, activating, grouping, aliasing, and relating lorebooks.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
-
-- Per-group **Select All / Deselect All** in Bulk Select mode (direct members only).
+MIT

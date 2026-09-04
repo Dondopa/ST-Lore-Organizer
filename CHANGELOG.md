@@ -1,48 +1,46 @@
 # Changelog
 
-## 0.1.4 - 2026-09-04
+## 0.2.0
 
-### Changed
-- Redesigned group headers into a dedicated title row plus a separate action row.
-- Group names now receive the full available width instead of competing with On/Off/Edit/Delete controls.
-- Reduced cumulative nesting indentation, especially on mobile, so deep trees remain readable.
-- Full group paths are exposed as title text for additional context on desktop.
+Major organizer upgrade focused on large modular lorebook libraries.
+
+- Added collapsible **Ungrouped** section with remembered state.
+- Added remembered group collapse state across reloads.
+- Added **Only** activation mode for groups: makes that group tree the active Global Lore set.
+- Added optional automatic lorebook **dependencies** with transitive activation.
+- Added **multi-group aliases/placements** so one native lorebook can appear in several organizer groups without duplication.
+- Added per-book **Manage** dialog for aliases and dependencies.
+- Added bulk **Alias** in addition to bulk Move.
+- Added bulk Select Active, Select Inactive, and Invert.
+- Added group **Move/Reparent** dialog, including moving groups back to root.
+- Added desktop group drag-and-drop nesting.
+- Added organizer **Backup/Restore** JSON export/import.
+- Added missing/orphaned reference detection and cleanup.
+- Improved group counts to show active and total book counts.
+- Migrates v0.1.x single-group assignments automatically to v0.2 multi-placement storage.
+- Native lorebook JSON files remain untouched.
+
+## 0.1.4
+
+- Responsive group header redesign.
+- Group names receive their own full-width row.
+- Group actions moved to a separate row.
+- Reduced nesting indentation for mobile/deep trees.
 
 ## 0.1.3
 
-- Added per-group **Select All / Deselect All** controls while Bulk Select mode is active.
-- Group selection affects only lorebooks directly assigned to that group, not nested subgroups.
-- Added matching Select All / Deselect All control for Ungrouped lorebooks.
-- Selected books can then be mass-moved using the existing bulk destination control.
+- Added per-group Select All / Deselect All in Bulk Select mode.
+- Added Select All / Deselect All for Ungrouped.
 
-All notable changes to Lore Organizer will be documented here.
+## 0.1.2
 
-## 0.1.2 - 2026-09-04
+- Added Bulk Select mode and mass move.
+- Added Select Visible.
 
-### Added
-- Bulk Select mode for moving many lorebooks into a group at once.
-- `Select visible` action, designed to work with the existing search filter.
-- Bulk move destination picker supporting any nested group or Ungrouped.
-- Selected-item count, Clear, and Done controls.
-- Bulk selection works for lorebooks whether currently grouped or ungrouped.
-- Desktop drag-and-drop is temporarily disabled while Bulk Select mode is active to avoid accidental moves.
+## 0.1.1
 
-## 0.1.1 - 2026-09-04
+- Fixed native Global Lore activation synchronization.
 
-### Fixed
-- Global lorebook activation/deactivation now drives SillyTavern's native `#world_info` selector and normal change handler.
-- Group On/Off and presets now apply activation changes in one native selection update instead of repeated slash-style calls.
-- Organizer checkbox state now shares the same source of truth as SillyTavern Global Lore.
+## 0.1.0
 
-## [0.1.0] - 2026-09-04
-
-### Added
-- Nested lorebook groups/folders.
-- Global lorebook activation toggles using SillyTavern's native World Info activation path.
-- Recursive enable/disable controls for groups.
-- Search across groups and lorebooks.
-- Desktop drag-and-drop assignment.
-- Mobile-friendly "Move to group" selector.
-- Activation presets that can save, apply, and delete sets of globally active lorebooks.
-- Organizer metadata stored separately in `extension_settings.lore_organizer`.
-- No modification of native lorebook JSON files.
+- Initial release.
