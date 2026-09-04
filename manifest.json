@@ -1,0 +1,12 @@
+{
+  "display_name": "Lore Organizer",
+  "loading_order": 50,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Duvi + ChatGPT",
+  "version": "0.1.0",
+  "homePage": "",
+  "auto_update": false
+}
