@@ -1,13 +1,23 @@
 # Changelog
 
+All notable changes to Lore Organizer will be documented here.
+
+## 0.1.2 - 2026-09-04
+
+### Added
+- Bulk Select mode for moving many lorebooks into a group at once.
+- `Select visible` action, designed to work with the existing search filter.
+- Bulk move destination picker supporting any nested group or Ungrouped.
+- Selected-item count, Clear, and Done controls.
+- Bulk selection works for lorebooks whether currently grouped or ungrouped.
+- Desktop drag-and-drop is temporarily disabled while Bulk Select mode is active to avoid accidental moves.
+
 ## 0.1.1 - 2026-09-04
 
 ### Fixed
 - Global lorebook activation/deactivation now drives SillyTavern's native `#world_info` selector and normal change handler.
 - Group On/Off and presets now apply activation changes in one native selection update instead of repeated slash-style calls.
 - Organizer checkbox state now shares the same source of truth as SillyTavern Global Lore.
-
-All notable changes to Lore Organizer will be documented here.
 
 ## [0.1.0] - 2026-09-04
 

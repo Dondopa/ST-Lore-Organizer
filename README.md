@@ -33,6 +33,8 @@ Groups are **organization only**. The underlying lorebooks remain separate nativ
 - Search groups and lorebooks.
 - Desktop drag-and-drop assignment.
 - Mobile-friendly **Move to group** selector.
+- **Bulk Select** mode for mass-moving lorebooks into groups.
+- **Select visible** for fast search → select-all → move workflows.
 - Activation presets: save the current global lorebook set and restore it later.
 - Ungrouped view for newly imported or unassigned lorebooks.
 - No server plugin required.
@@ -128,7 +130,7 @@ The prototype stores:
 
 Deleting the extension does not merge, rewrite, or delete your native lorebooks.
 
-## Current limitations — v0.1.0
+## Current limitations — v0.1.2
 
 - A lorebook belongs to one organizer group at a time.
 - Groups cannot yet be reordered with drag-and-drop.
@@ -145,7 +147,7 @@ Deleting the extension does not merge, rewrite, or delete your native lorebooks.
 - Organizer layout import/export.
 - Named universes/workspaces.
 - Group activation modes: **Add**, **Remove**, and **Replace Current**.
-- Context menus and bulk actions.
+- Context menus and additional bulk actions.
 - Compact/floating launcher.
 - Better touch controls.
 

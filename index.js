@@ -13,6 +13,11 @@ const defaults = {
     collapsed: {},
 };
 
+const uiState = {
+    bulkMode: false,
+    bulkSelected: new Set(),
+};
+
 function settings() {
     if (!extension_settings[EXT]) extension_settings[EXT] = structuredClone(defaults);
     const s = extension_settings[EXT];
@@ -58,9 +63,6 @@ function applyNativeGlobalSelection(targetNames) {
         .filter(({ name, index }) => valid.has(name) && index >= 0)
         .map(({ index }) => String(index));
 
-    // Drive SillyTavern's own Global Lore <select>. Its native change handler
-    // rebuilds selected_world_info, persists settings, updates Select2, and emits
-    // WORLDINFO_SETTINGS_UPDATED. This avoids maintaining a parallel activation state.
     const selector = $('#world_info');
     selector.val(indices.length ? indices : null).trigger('change');
 }
@@ -97,18 +99,21 @@ function groupPath(id) {
     return parts.join(' / ');
 }
 
-function groupOptions(selected = '') {
-    return ['<option value="">Ungrouped</option>', ...settings().groups
+function groupOptions(selected = '', includeUngrouped = true) {
+    const options = includeUngrouped ? ['<option value="">Ungrouped</option>'] : ['<option value="" disabled selected>Move selected to…</option>'];
+    return [...options, ...settings().groups
         .slice().sort((a,b)=>groupPath(a.id).localeCompare(groupPath(b.id)))
-        .map(g => `<option value="${esc(g.id)}" ${g.id===selected?'selected':''}>${esc(groupPath(g.id))}</option>`)].join('');
+        .map(g => `<option value="${esc(g.id)}" ${includeUngrouped && g.id===selected?'selected':''}>${esc(groupPath(g.id))}</option>`)].join('');
 }
 
 function renderBook(name) {
     const active = activeSet().has(name);
     const gid = settings().assignments[name] ?? '';
-    return `<div class="lo-book" draggable="true" data-book="${esc(name)}">
+    const bulkChecked = uiState.bulkSelected.has(name);
+    return `<div class="lo-book" draggable="${uiState.bulkMode ? 'false' : 'true'}" data-book="${esc(name)}">
+        ${uiState.bulkMode ? `<label class="lo-bulk-pick" title="Select for bulk move"><input class="lo-bulk-checkbox" type="checkbox" data-book="${esc(name)}" ${bulkChecked?'checked':''}></label>` : ''}
         <label class="lo-book-main"><input class="lo-book-toggle" type="checkbox" data-book="${esc(name)}" ${active?'checked':''}><span title="${esc(name)}">${esc(name)}</span></label>
-        <select class="lo-move" data-book="${esc(name)}" title="Move to group">${groupOptions(gid)}</select>
+        ${uiState.bulkMode ? '' : `<select class="lo-move" data-book="${esc(name)}" title="Move to group">${groupOptions(gid)}</select>`}
     </div>`;
 }
 
@@ -156,6 +161,60 @@ function renderPresets() {
     </div>`;
 }
 
+function visibleBookNames() {
+    return [...document.querySelectorAll('#lo_tree .lo-book')].map(el => el.dataset.book).filter(Boolean);
+}
+
+function renderBulkBar() {
+    const wrap = document.querySelector('#lo_bulk_wrap');
+    if (!wrap) return;
+    if (!uiState.bulkMode) {
+        wrap.innerHTML = `<button id="lo_bulk_enter" class="menu_button">☑ Bulk Select</button>`;
+        document.querySelector('#lo_bulk_enter')?.addEventListener('click', () => {
+            uiState.bulkMode = true;
+            uiState.bulkSelected.clear();
+            render();
+        });
+        return;
+    }
+
+    wrap.innerHTML = `<div class="lo-bulkbar">
+        <span class="lo-bulk-count">Selected: ${uiState.bulkSelected.size}</span>
+        <button id="lo_bulk_select_visible" class="menu_button" title="Select all lorebooks currently shown by search/filter">Select visible</button>
+        <button id="lo_bulk_clear" class="menu_button">Clear</button>
+        <select id="lo_bulk_group" title="Destination group">${groupOptions('', false)}<option value="__UNGROUPED__">Ungrouped</option></select>
+        <button id="lo_bulk_move" class="menu_button" ${uiState.bulkSelected.size ? '' : 'disabled'}>Move</button>
+        <button id="lo_bulk_exit" class="menu_button">Done</button>
+    </div>`;
+
+    document.querySelector('#lo_bulk_select_visible')?.addEventListener('click', () => {
+        for (const name of visibleBookNames()) uiState.bulkSelected.add(name);
+        render();
+    });
+    document.querySelector('#lo_bulk_clear')?.addEventListener('click', () => {
+        uiState.bulkSelected.clear();
+        render();
+    });
+    document.querySelector('#lo_bulk_move')?.addEventListener('click', () => {
+        const select = document.querySelector('#lo_bulk_group');
+        const dest = select?.value;
+        if (!dest || !uiState.bulkSelected.size) return;
+        for (const name of uiState.bulkSelected) {
+            if (!books().includes(name)) continue;
+            if (dest === '__UNGROUPED__') delete settings().assignments[name];
+            else if (groupById(dest)) settings().assignments[name] = dest;
+        }
+        save();
+        uiState.bulkSelected.clear();
+        render();
+    });
+    document.querySelector('#lo_bulk_exit')?.addEventListener('click', () => {
+        uiState.bulkMode = false;
+        uiState.bulkSelected.clear();
+        render();
+    });
+}
+
 function render() {
     const root = document.querySelector('#lo_tree');
     if (!root) return;
@@ -167,6 +226,7 @@ function render() {
       <div class="lo-group-body">${loose.map(renderBook).join('')}</div></section>`;
     const presetWrap = document.querySelector('#lo_presets_wrap');
     if (presetWrap) presetWrap.innerHTML = renderPresets();
+    renderBulkBar();
     bindDynamic();
 }
 
@@ -192,6 +252,12 @@ function deleteGroup(id) {
 
 function bindDynamic() {
     document.querySelectorAll('.lo-book-toggle').forEach(el=>el.addEventListener('change', e=>setBookActive(e.currentTarget.dataset.book, e.currentTarget.checked)));
+    document.querySelectorAll('.lo-bulk-checkbox').forEach(el=>el.addEventListener('change', e=>{
+        const name = e.currentTarget.dataset.book;
+        if (e.currentTarget.checked) uiState.bulkSelected.add(name);
+        else uiState.bulkSelected.delete(name);
+        renderBulkBar();
+    }));
     document.querySelectorAll('.lo-move').forEach(el=>el.addEventListener('change', e=>{ const b=e.currentTarget.dataset.book, v=e.currentTarget.value; if(v)settings().assignments[b]=v; else delete settings().assignments[b]; save(); render(); }));
     document.querySelectorAll('.lo-collapse').forEach(el=>el.addEventListener('click', e=>{ const id=e.currentTarget.dataset.group; settings().collapsed[id]=!settings().collapsed[id]; save(); render(); }));
     document.querySelectorAll('.lo-group-on').forEach(el=>el.addEventListener('click', e=>setMany(booksInGroupTree(e.currentTarget.dataset.group), true)));
@@ -199,8 +265,10 @@ function bindDynamic() {
     document.querySelectorAll('.lo-add-child').forEach(el=>el.addEventListener('click', e=>addGroup(e.currentTarget.dataset.group)));
     document.querySelectorAll('.lo-rename-group').forEach(el=>el.addEventListener('click', e=>{ const g=groupById(e.currentTarget.dataset.group); const n=promptName('Rename group:', g?.name??''); if(n&&g){g.name=n;save();render();} }));
     document.querySelectorAll('.lo-delete-group').forEach(el=>el.addEventListener('click', e=>deleteGroup(e.currentTarget.dataset.group)));
-    document.querySelectorAll('.lo-book').forEach(el=>el.addEventListener('dragstart', e=>e.dataTransfer.setData('text/lorebook', e.currentTarget.dataset.book)));
-    document.querySelectorAll('[data-drop-group]').forEach(el=>{ el.addEventListener('dragover', e=>{e.preventDefault();e.currentTarget.classList.add('lo-drop');}); el.addEventListener('dragleave', e=>e.currentTarget.classList.remove('lo-drop')); el.addEventListener('drop', e=>{e.preventDefault();e.currentTarget.classList.remove('lo-drop');const b=e.dataTransfer.getData('text/lorebook');const gid=e.currentTarget.dataset.dropGroup;if(!b)return;if(gid)settings().assignments[b]=gid;else delete settings().assignments[b];save();render();}); });
+    if (!uiState.bulkMode) {
+        document.querySelectorAll('.lo-book').forEach(el=>el.addEventListener('dragstart', e=>e.dataTransfer.setData('text/lorebook', e.currentTarget.dataset.book)));
+        document.querySelectorAll('[data-drop-group]').forEach(el=>{ el.addEventListener('dragover', e=>{e.preventDefault();e.currentTarget.classList.add('lo-drop');}); el.addEventListener('dragleave', e=>e.currentTarget.classList.remove('lo-drop')); el.addEventListener('drop', e=>{e.preventDefault();e.currentTarget.classList.remove('lo-drop');const b=e.dataTransfer.getData('text/lorebook');const gid=e.currentTarget.dataset.dropGroup;if(!b)return;if(gid)settings().assignments[b]=gid;else delete settings().assignments[b];save();render();}); });
+    }
     document.querySelector('#lo_apply_preset')?.addEventListener('click', ()=>{ const n=document.querySelector('#lo_preset_select')?.value; if(n) replaceActive(settings().presets[n]??[]); });
     document.querySelector('#lo_save_preset')?.addEventListener('click', ()=>{ const n=promptName('Preset name:'); if(!n)return; settings().presets[n]=[...(selected_world_info??[])]; save(); render(); });
     document.querySelector('#lo_delete_preset')?.addEventListener('click', ()=>{ const n=document.querySelector('#lo_preset_select')?.value; if(!n)return; if(window.confirm(`Delete preset “${n}”?`)){delete settings().presets[n];save();render();} });
@@ -216,6 +284,7 @@ function buildUI() {
       <div class="inline-drawer-content">
         <div class="lo-toolbar"><input id="lo_search" class="text_pole" placeholder="Search lorebooks or groups…"><button id="lo_add_root" class="menu_button">+ Group</button><button id="lo_refresh" class="menu_button">↻</button></div>
         <div id="lo_presets_wrap"></div>
+        <div id="lo_bulk_wrap"></div>
         <div class="lo-note">Folders are organization only. Checkboxes control SillyTavern's native global lorebook selection.</div>
         <div id="lo_tree"></div>
       </div></div>`;
