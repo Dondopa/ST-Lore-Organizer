@@ -106,3 +106,9 @@ Lore Organizer is intentionally not a World Info entry editor. SillyTavern conti
 ## License
 
 MIT
+
+
+## Deep Entry Search (v0.3.0)
+Use **🔬 Entries** in Lore Organizer to search inside every native SillyTavern lorebook. Search can include entry names/comments, primary keys, secondary keys, and content. Results show the source lorebook, entry label, UID, matching fields, and a nearby snippet.
+
+Deep search is opt-in and uses SillyTavern's native lorebook loader. The first search may take longer on very large libraries; loaded books are cached for the current page session. Use **Clear cache** after changing lorebook contents if you want the next search to reload them. No SQLite database is required.

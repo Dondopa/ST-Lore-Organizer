@@ -1,9 +1,9 @@
 import { extension_settings } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
-import { world_names, selected_world_info } from '../../../world-info.js';
+import { world_names, selected_world_info, loadWorldInfo } from '../../../world-info.js';
 
 const EXT = 'lore_organizer';
-const VERSION = 2;
+const VERSION = 3;
 const UNGROUPED_COLLAPSE_KEY = '__ungrouped__';
 
 const defaults = {
@@ -19,6 +19,8 @@ const defaults = {
 const uiState = {
     bulkMode: false,
     bulkSelected: new Set(),
+    entrySearchCache: new Map(),
+    entrySearchRun: 0,
 };
 
 function settings() {
@@ -530,6 +532,140 @@ function bindDynamic() {
     document.querySelector('#lo_delete_preset')?.addEventListener('click', ()=>{ const n=document.querySelector('#lo_preset_select')?.value; if(!n)return; if(window.confirm(`Delete preset “${n}”?`)){delete settings().presets[n];save();render();} });
 }
 
+
+function entryListFromWorld(data) {
+    // Native ST lorebooks are { entries: { uid: entry } }, but tolerate arrays and
+    // a few wrapper shapes used by imported/third-party books. Deep Search is read-only.
+    if (!data || typeof data !== 'object') return [];
+    const candidates = [
+        data.entries,
+        data.data?.entries,
+        data.world_info?.entries,
+        data.worldInfo?.entries,
+        data.originalData?.entries,
+    ];
+    let raw = candidates.find(x => Array.isArray(x) || (x && typeof x === 'object'));
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(x => x && typeof x === 'object');
+    return Object.entries(raw)
+        .filter(([, entry]) => entry && typeof entry === 'object')
+        .map(([id, entry]) => ({ ...entry, uid: entry.uid ?? id }));
+}
+
+function entryFieldValue(entry, field) {
+    if (!entry || typeof entry !== 'object') return '';
+    if (field === 'comment') return entry.comment ?? entry.name ?? entry.title ?? '';
+    if (field === 'key') return entry.key ?? entry.keys ?? entry.primary_keys ?? entry.primaryKeys ?? [];
+    if (field === 'keysecondary') return entry.keysecondary ?? entry.keySecondary ?? entry.secondary_keys ?? entry.secondaryKeys ?? [];
+    if (field === 'content') return entry.content ?? entry.text ?? entry.value ?? '';
+    return '';
+}
+async function cachedWorldInfo(name) {
+    if (uiState.entrySearchCache.has(name)) return uiState.entrySearchCache.get(name);
+    const data = await loadWorldInfo(name);
+    uiState.entrySearchCache.set(name, data);
+    return data;
+}
+
+function fieldMatch(value, query, mode='contains') {
+    const q = String(query ?? '').trim().toLowerCase();
+    if (!q) return false;
+    const values = Array.isArray(value) ? value : [value];
+    return values.some(v => {
+        const text = String(v ?? '').toLowerCase();
+        return mode === 'exact' ? text.trim() === q : text.includes(q);
+    });
+}
+
+function entryLabel(entry) {
+    const comment = String(entry?.comment ?? '').trim();
+    if (comment) return comment;
+    const keys = Array.isArray(entry?.key) ? entry.key.filter(Boolean) : [];
+    if (keys.length) return keys.slice(0, 3).join(', ');
+    return `Entry ${entry?.uid ?? '?'}`;
+}
+
+function resultSnippet(entry, query, fields) {
+    const q = String(query ?? '').toLowerCase();
+    for (const field of fields) {
+        const raw = entryFieldValue(entry, field);
+        const text = Array.isArray(raw) ? raw.join(', ') : String(raw ?? '');
+        const at = text.toLowerCase().indexOf(q);
+        if (at >= 0) {
+            const start = Math.max(0, at - 55), end = Math.min(text.length, at + q.length + 95);
+            return `${start ? '…' : ''}${text.slice(start, end).replace(/\s+/g, ' ').trim()}${end < text.length ? '…' : ''}`;
+        }
+    }
+    return '';
+}
+
+function openEntrySearch() {
+    const modal = openModal('🔬 Deep Entry Search', `<div class="lo-entry-search">
+      <p class="lo-help">Search inside every native SillyTavern lorebook. Nothing is added to prompt context. The first search may take longer while books are loaded; later searches reuse a session cache.</p>
+      <div class="lo-entry-search-row"><input id="lo_entry_query" class="text_pole" placeholder="Search entry titles, keys, or content…"><select id="lo_entry_mode"><option value="contains">Contains</option><option value="exact">Exact field/key</option></select><button id="lo_entry_go" class="menu_button">Search</button></div>
+      <div class="lo-entry-fields"><label><input type="checkbox" data-field="comment" checked> Name/comment</label><label><input type="checkbox" data-field="key" checked> Primary keys</label><label><input type="checkbox" data-field="keysecondary" checked> Secondary keys</label><label><input type="checkbox" data-field="content" checked> Content</label></div>
+      <div class="lo-entry-search-actions"><label>Limit <select id="lo_entry_limit"><option>50</option><option selected>100</option><option>200</option><option>500</option></select></label><button id="lo_entry_clear_cache" class="menu_button" title="Forget loaded lorebook data and reload it on the next search">Clear cache</button></div>
+      <div id="lo_entry_status" class="lo-entry-status">Enter at least 2 characters.</div><div id="lo_entry_results" class="lo-entry-results"></div>
+    </div>`);
+    const input = modal.querySelector('#lo_entry_query');
+    const run = () => runEntrySearch(modal);
+    modal.querySelector('#lo_entry_go')?.addEventListener('click', run);
+    input?.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+    modal.querySelector('#lo_entry_clear_cache')?.addEventListener('click', () => { uiState.entrySearchCache.clear(); modal.querySelector('#lo_entry_status').textContent = 'Cache cleared.'; });
+    setTimeout(()=>input?.focus(), 0);
+}
+
+async function runEntrySearch(modal) {
+    const query = String(modal.querySelector('#lo_entry_query')?.value ?? '').trim();
+    const status = modal.querySelector('#lo_entry_status');
+    const resultsEl = modal.querySelector('#lo_entry_results');
+    if (query.length < 2) { status.textContent = 'Enter at least 2 characters.'; resultsEl.innerHTML=''; return; }
+    const fields = [...modal.querySelectorAll('.lo-entry-fields input:checked')].map(x=>x.dataset.field);
+    if (!fields.length) { status.textContent='Choose at least one field.'; return; }
+    const mode = modal.querySelector('#lo_entry_mode')?.value ?? 'contains';
+    const limit = Number(modal.querySelector('#lo_entry_limit')?.value ?? 100);
+    const runId = ++uiState.entrySearchRun;
+    const allBooks = books();
+    const matches = [];
+    let entriesScanned = 0;
+    let booksLoaded = 0;
+    let booksWithEntries = 0;
+    let loadErrors = 0;
+    resultsEl.innerHTML = '';
+    status.textContent = `Searching 0/${allBooks.length} lorebooks…`;
+
+    for (let i=0; i<allBooks.length; i++) {
+        if (runId !== uiState.entrySearchRun || !document.body.contains(modal)) return;
+        const book = allBooks[i];
+        try {
+            const data = await cachedWorldInfo(book);
+            booksLoaded++;
+            const bookEntries = entryListFromWorld(data);
+            if (bookEntries.length) booksWithEntries++;
+            entriesScanned += bookEntries.length;
+            for (const entry of bookEntries) {
+                const hitFields = fields.filter(field => fieldMatch(entryFieldValue(entry, field), query, mode));
+                if (!hitFields.length) continue;
+                matches.push({ book, entry, hitFields });
+                if (matches.length >= limit) break;
+            }
+        } catch (err) {
+            loadErrors++;
+            console.warn(`[Lore Organizer] Could not load lorebook for deep search: ${book}`, err);
+        }
+        if (i % 5 === 0 || i === allBooks.length-1) status.textContent = `Searching ${i+1}/${allBooks.length} lorebooks… ${matches.length} match${matches.length===1?'':'es'}`;
+        if (matches.length >= limit) break;
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    if (runId !== uiState.entrySearchRun) return;
+    const fieldNames = {comment:'name', key:'primary key', keysecondary:'secondary key', content:'content'};
+    resultsEl.innerHTML = matches.map(({book, entry, hitFields}) => `<article class="lo-entry-result"><div class="lo-entry-result-book">📕 ${esc(book)}</div><div class="lo-entry-result-title">${esc(entryLabel(entry))} <span class="lo-entry-uid">UID ${esc(entry?.uid ?? '?')}</span></div><div class="lo-entry-result-meta">Match: ${hitFields.map(f=>fieldNames[f]).join(', ')}</div>${mode==='contains' ? `<div class="lo-entry-snippet">${esc(resultSnippet(entry, query, hitFields))}</div>` : ''}</article>`).join('') || '<div class="lo-entry-empty">No matching entries.</div>';
+    status.textContent = `${matches.length} match${matches.length===1?'':'es'}${matches.length >= limit ? ` (limit ${limit} reached)` : ''} • scanned ${entriesScanned} entries from ${booksWithEntries}/${booksLoaded} loaded lorebooks${loadErrors ? ` • ${loadErrors} load error${loadErrors===1?'':'s'}` : ''}.`;
+    if (!entriesScanned && allBooks.length) {
+        resultsEl.innerHTML = '<div class="lo-entry-empty"><strong>Deep Search loaded the lorebook list but found zero readable entries.</strong><br>This usually means SillyTavern returned a different lorebook data shape or the books could not be loaded. Check the browser console for <code>[Lore Organizer]</code> warnings.</div>';
+    }
+}
+
 function buildUI() {
     if (document.querySelector('#lo_panel')) return;
     const wrapper = document.createElement('div');
@@ -538,7 +674,7 @@ function buildUI() {
     wrapper.innerHTML = `<div class="inline-drawer">
       <div class="inline-drawer-toggle inline-drawer-header"><b>📚 Lore Organizer</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>
       <div class="inline-drawer-content">
-        <div class="lo-toolbar"><input id="lo_search" class="text_pole" placeholder="Search lorebooks or groups…"><button id="lo_add_root" class="menu_button">+ Group</button><button id="lo_export" class="menu_button" title="Export organizer backup">Backup</button><button id="lo_import" class="menu_button" title="Import organizer backup">Restore</button><button id="lo_refresh" class="menu_button">↻</button><input id="lo_import_file" type="file" accept="application/json,.json" hidden></div>
+        <div class="lo-toolbar"><input id="lo_search" class="text_pole" placeholder="Search lorebooks or groups…"><button id="lo_entry_search" class="menu_button" title="Search inside lorebook entries">🔬 Entries</button><button id="lo_add_root" class="menu_button">+ Group</button><button id="lo_export" class="menu_button" title="Export organizer backup">Backup</button><button id="lo_import" class="menu_button" title="Import organizer backup">Restore</button><button id="lo_refresh" class="menu_button">↻</button><input id="lo_import_file" type="file" accept="application/json,.json" hidden></div>
         <div class="lo-settings-row"><label><input id="lo_auto_deps" type="checkbox" ${settings().autoDependencies?'checked':''}> Auto-activate dependencies</label></div>
         <div id="lo_presets_wrap"></div>
         <div id="lo_bulk_wrap"></div>
@@ -548,6 +684,7 @@ function buildUI() {
     const host = document.querySelector('#extensions_settings2') ?? document.querySelector('#extensions_settings') ?? document.querySelector('#extension_settings');
     (host ?? document.body).appendChild(wrapper);
     document.querySelector('#lo_search')?.addEventListener('input', render);
+    document.querySelector('#lo_entry_search')?.addEventListener('click', openEntrySearch);
     document.querySelector('#lo_add_root')?.addEventListener('click', ()=>addGroup(null));
     document.querySelector('#lo_export')?.addEventListener('click', exportOrganizer);
     document.querySelector('#lo_import')?.addEventListener('click', ()=>document.querySelector('#lo_import_file')?.click());

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.1
+- Fixed Deep Entry Search entry extraction for native and common wrapped lorebook shapes.
+- Added field aliases for imported/third-party lorebooks.
+- Added scan diagnostics: entries scanned, books with readable entries, and load errors.
+- Deep Search now explicitly reports when the lorebook list loads but zero readable entries are found.
+
+
+## 0.3.0
+- Added opt-in Deep Entry Search across all native SillyTavern lorebooks.
+- Search entry name/comment, primary keys, secondary keys, and content.
+- Added Contains and Exact field/key modes, result limits, match-field labels, snippets, and UID display.
+- Added an in-session lorebook cache so repeated searches do not reload every book.
+- Added progress reporting and a cache-clear control.
+- No SQLite/database dependency; native lorebook JSON remains authoritative.
+
 ## 0.2.0
 
 Major organizer upgrade focused on large modular lorebook libraries.
