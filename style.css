@@ -87,3 +87,7 @@
   .lo-entry-search-row select,.lo-entry-search-row button { flex:1; }
   .lo-entry-results { max-height:58vh; }
 }
+
+.lo-entry-result-openable { cursor:pointer; border-radius:5px; }
+.lo-entry-result-openable:hover,.lo-entry-result-openable:focus { background:color-mix(in srgb,var(--SmartThemeQuoteColor) 12%,transparent); outline:none; }
+.lo-entry-open-hint { float:right; font-size:.72em; font-weight:400; opacity:.65; margin-left:8px; }

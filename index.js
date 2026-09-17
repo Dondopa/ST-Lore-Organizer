@@ -1,6 +1,6 @@
 import { extension_settings } from '../../../extensions.js';
 import { saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
-import { world_names, selected_world_info, loadWorldInfo } from '../../../world-info.js';
+import { world_names, selected_world_info, loadWorldInfo, openWorldInfoEditor } from '../../../world-info.js';
 
 const EXT = 'lore_organizer';
 const VERSION = 3;
@@ -599,6 +599,42 @@ function resultSnippet(entry, query, fields) {
     return '';
 }
 
+
+async function openNativeEntry(book, entry) {
+    const uid = Number(entry?.uid);
+    if (!book || !Number.isFinite(uid)) return;
+
+    // Hand editing back to SillyTavern's native World Info editor.
+    closeModal();
+    openWorldInfoEditor(book);
+
+    // Narrow the native editor to this entry so it is rendered even when the
+    // lorebook spans many pagination pages, then focus the exact UID.
+    const searchText = String(entry?.comment ?? '').trim()
+        || (Array.isArray(entry?.key) ? String(entry.key[0] ?? '').trim() : '')
+        || String(entry?.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+        const selector = `#world_popup_entries_list [uid="${uid}"]`;
+        let target = document.querySelector(selector);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.click();
+            return;
+        }
+
+        const nativeSearch = document.querySelector('#world_info_search');
+        if (nativeSearch && searchText && nativeSearch.value !== searchText) {
+            nativeSearch.value = searchText;
+            nativeSearch.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        await new Promise(resolve => setTimeout(resolve, 120));
+    }
+
+    console.warn(`[Lore Organizer] Opened lorebook "${book}" but could not focus UID ${uid}.`);
+}
+
 function openEntrySearch() {
     const modal = openModal('🔬 Deep Entry Search', `<div class="lo-entry-search">
       <p class="lo-help">Search inside every native SillyTavern lorebook. Nothing is added to prompt context. The first search may take longer while books are loaded; later searches reuse a session cache.</p>
@@ -659,7 +695,15 @@ async function runEntrySearch(modal) {
     }
     if (runId !== uiState.entrySearchRun) return;
     const fieldNames = {comment:'name', key:'primary key', keysecondary:'secondary key', content:'content'};
-    resultsEl.innerHTML = matches.map(({book, entry, hitFields}) => `<article class="lo-entry-result"><div class="lo-entry-result-book">📕 ${esc(book)}</div><div class="lo-entry-result-title">${esc(entryLabel(entry))} <span class="lo-entry-uid">UID ${esc(entry?.uid ?? '?')}</span></div><div class="lo-entry-result-meta">Match: ${hitFields.map(f=>fieldNames[f]).join(', ')}</div>${mode==='contains' ? `<div class="lo-entry-snippet">${esc(resultSnippet(entry, query, hitFields))}</div>` : ''}</article>`).join('') || '<div class="lo-entry-empty">No matching entries.</div>';
+    resultsEl.innerHTML = matches.map(({book, entry, hitFields}, index) => `<article class="lo-entry-result lo-entry-result-openable" data-result-index="${index}" role="button" tabindex="0" title="Open this entry in SillyTavern's native World Info editor"><div class="lo-entry-result-book">📕 ${esc(book)}</div><div class="lo-entry-result-title">${esc(entryLabel(entry))} <span class="lo-entry-uid">UID ${esc(entry?.uid ?? '?')}</span><span class="lo-entry-open-hint">Open ↗</span></div><div class="lo-entry-result-meta">Match: ${hitFields.map(f=>fieldNames[f]).join(', ')}</div>${mode==='contains' ? `<div class="lo-entry-snippet">${esc(resultSnippet(entry, query, hitFields))}</div>` : ''}</article>`).join('') || '<div class="lo-entry-empty">No matching entries.</div>';
+    resultsEl.querySelectorAll('.lo-entry-result-openable').forEach(el => {
+        const open = () => {
+            const match = matches[Number(el.dataset.resultIndex)];
+            if (match) openNativeEntry(match.book, match.entry);
+        };
+        el.addEventListener('click', open);
+        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
     status.textContent = `${matches.length} match${matches.length===1?'':'es'}${matches.length >= limit ? ` (limit ${limit} reached)` : ''} • scanned ${entriesScanned} entries from ${booksWithEntries}/${booksLoaded} loaded lorebooks${loadErrors ? ` • ${loadErrors} load error${loadErrors===1?'':'s'}` : ''}.`;
     if (!entriesScanned && allBooks.length) {
         resultsEl.innerHTML = '<div class="lo-entry-empty"><strong>Deep Search loaded the lorebook list but found zero readable entries.</strong><br>This usually means SillyTavern returned a different lorebook data shape or the books could not be loaded. Check the browser console for <code>[Lore Organizer]</code> warnings.</div>';

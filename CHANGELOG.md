@@ -1,3 +1,8 @@
+## 0.3.2
+- Deep Entry Search results are now clickable/tappable.
+- Opens the matching lorebook in SillyTavern’s native World Info editor and focuses the matching UID.
+- Keeps all lorebook editing in SillyTavern’s native editor.
+
 # Changelog
 
 ## 0.3.1
